@@ -1,3 +1,44 @@
+# FlashcardsApp
+
+A very basic React Native Flashcards app with two screens:
+- Flashcards List (shows all flashcards)
+- Add Flashcard (add a new flashcard)
+
+## Features
+- Minimal UI, no animations
+- Uses React Navigation for screen navigation
+- Uses AsyncStorage for persistent storage
+- FlatList for displaying flashcards
+
+## How to Run
+
+1. Install dependencies:
+   ```sh
+   npm install
+   ```
+2. For iOS, install pods:
+   ```sh
+   cd ios && pod install && cd ..
+   ```
+3. Start Metro:
+   ```sh
+   npx react-native start
+   ```
+4. Run on Android:
+   ```sh
+   npx react-native run-android
+   ```
+   Or on iOS:
+   ```sh
+   npx react-native run-ios
+   ```
+
+## Notes
+- Only React Navigation and AsyncStorage are used as extra libraries.
+- UI is intentionally kept very simple.
+
+---
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
