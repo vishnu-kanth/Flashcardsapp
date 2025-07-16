@@ -104,5 +104,9 @@ Flipper-Folly/
 # Debug and release builds
 android/app/build/
 android/build/
+android/.gradle/
+android/app/.cxx/
+*.hprof
+.cxx/
 ios/build/
 ios/Pods/
