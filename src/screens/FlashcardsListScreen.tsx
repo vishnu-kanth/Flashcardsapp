@@ -1,5 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Button, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TextInput,
+  StyleSheet, 
+  TouchableOpacity, 
+  Animated, 
+  Dimensions,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  Alert
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { UserType } from '../../App';
 import { Animated as RNAnimated } from 'react-native';
@@ -32,6 +44,10 @@ const FlashcardsListScreen: React.FC<FlashcardsListScreenProps> = ({ user, navig
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [current, setCurrent] = useState(0);
   const [flipped, setFlipped] = useState<{ [key: number]: boolean }>({});
+  const [userAnswers, setUserAnswers] = useState<{ [key: number]: string }>({});
+  const [currentAnswer, setCurrentAnswer] = useState('');
+  const [answerSubmitted, setAnswerSubmitted] = useState<{ [key: number]: boolean }>({});
+  const [score, setScore] = useState({ correct: 0, total: 0 });
   const animatedValues = useRef<{ [key: number]: Animated.Value }>({}).current;
   const slideAnim = useRef(new RNAnimated.Value(0)).current;
   const STORAGE_KEY = `FLASHCARDS_${user.username}`;
@@ -108,6 +124,7 @@ const FlashcardsListScreen: React.FC<FlashcardsListScreenProps> = ({ user, navig
         useNativeDriver: true,
       }).start(() => {
         setCurrent(c => c + 1);
+        resetCurrentAnswer();
         slideAnim.setValue(CARD_WIDTH); // start from right
         RNAnimated.timing(slideAnim, {
           toValue: 0,
@@ -126,6 +143,7 @@ const FlashcardsListScreen: React.FC<FlashcardsListScreenProps> = ({ user, navig
         useNativeDriver: true,
       }).start(() => {
         setCurrent(c => c - 1);
+        resetCurrentAnswer();
         slideAnim.setValue(-CARD_WIDTH); // start from left
         RNAnimated.timing(slideAnim, {
           toValue: 0,
@@ -136,17 +154,73 @@ const FlashcardsListScreen: React.FC<FlashcardsListScreenProps> = ({ user, navig
     }
   };
 
+  const handleSubmitAnswer = () => {
+    if (!currentAnswer.trim()) {
+      Alert.alert('No Answer', 'Please enter your answer before submitting.');
+      return;
+    }
+
+    const trimmedAnswer = currentAnswer.trim().toLowerCase();
+    const correctAnswer = flashcards[current].answer.trim().toLowerCase();
+    const isCorrect = trimmedAnswer === correctAnswer;
+
+    // Store the user's answer
+    setUserAnswers(prev => ({ ...prev, [current]: currentAnswer.trim() }));
+    setAnswerSubmitted(prev => ({ ...prev, [current]: true }));
+
+    // Update score
+    setScore(prev => ({
+      correct: prev.correct + (isCorrect ? 1 : 0),
+      total: prev.total + 1
+    }));
+
+    // Auto-flip the card to show the answer
+    handleFlip(current);
+  };
+
+  const getAnswerStatus = (idx: number) => {
+    if (!answerSubmitted[idx]) return null;
+    
+    const userAnswer = userAnswers[idx]?.toLowerCase().trim();
+    const correctAnswer = flashcards[idx].answer.toLowerCase().trim();
+    return userAnswer === correctAnswer ? 'correct' : 'incorrect';
+  };
+
+  const resetCurrentAnswer = () => {
+    setCurrentAnswer('');
+  };
+
+  // Reset answer when navigating to a new card
+  useEffect(() => {
+    setCurrentAnswer(userAnswers[current] || '');
+  }, [current, userAnswers]);
+
   if (flashcards.length === 0) {
     return (
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6a5acd" />
+        
         <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>Flashcards</Text>
-          <Button title="Logout" onPress={onLogout} />
+          <Text style={styles.headerTitle}>📚 Flashcards</Text>
+          <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+            <Text style={styles.logoutText}>🚪 Logout</Text>
+          </TouchableOpacity>
         </View>
-        <Text style={styles.empty}>No flashcards yet.</Text>
-        {user.role === 'admin' && (
-          <Button title="Add Flashcard" onPress={() => navigation.navigate('AddFlashcard')} />
-        )}
+
+        <View style={styles.emptyStateContainer}>
+          <Text style={styles.emptyIcon}>🎯</Text>
+          <Text style={styles.emptyTitle}>Ready to Learn?</Text>
+          <Text style={styles.emptyMessage}>No flashcards yet. {user.role === 'admin' ? 'Create your first one!' : 'Ask an admin to add some!'}</Text>
+          
+          {user.role === 'admin' && (
+            <TouchableOpacity 
+              style={styles.addFirstBtn} 
+              onPress={() => navigation.navigate('AddFlashcard')}
+            >
+              <Text style={styles.addFirstBtnText}>✨ Create First Flashcard</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   }
@@ -165,22 +239,40 @@ const FlashcardsListScreen: React.FC<FlashcardsListScreenProps> = ({ user, navig
   const progress = ((current + 1) / flashcards.length) * 100;
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="#6a5acd" />
+      
       <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>Flashcards</Text>
-        <Button title="Logout" onPress={onLogout} />
+        <Text style={styles.headerTitle}>📚 Flashcards</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+          <Text style={styles.logoutText}>🚪 Logout</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Score Display - Only show for regular users */}
+      {score.total > 0 && user.role === 'user' && (
+        <View style={styles.scoreContainer}>
+          <Text style={styles.scoreText}>
+            Score: {score.correct}/{score.total} ({Math.round((score.correct / score.total) * 100)}%)
+          </Text>
+        </View>
+      )}
+
       <View style={styles.progressBarContainer}>
         <View style={styles.progressBarBg}>
           <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
         </View>
         <Text style={styles.progressText}>{current + 1} / {flashcards.length}</Text>
       </View>
+
       <RNAnimated.View style={{ transform: [{ translateX: slideAnim }], alignSelf: 'center' }}>
         <View style={[styles.cardWrapper, { width: CARD_WIDTH }]}> 
           {user.role === 'admin' && (
             <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(idx)}>
-              <Text style={{ color: '#c00', fontWeight: 'bold', fontSize: 18 }}>×</Text>
+              <Text style={styles.deleteBtnText}>❌</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity onPress={() => handleFlip(idx)} activeOpacity={0.8}>
@@ -198,7 +290,9 @@ const FlashcardsListScreen: React.FC<FlashcardsListScreenProps> = ({ user, navig
                   },
                 ]}
               >
+                <Text style={styles.cardLabel}>Question</Text>
                 <Text style={styles.question}>{item.question}</Text>
+                <Text style={styles.tapHint}>👆 Tap to reveal answer</Text>
               </Animated.View>
               <Animated.View
                 style={[
@@ -213,168 +307,488 @@ const FlashcardsListScreen: React.FC<FlashcardsListScreenProps> = ({ user, navig
                   },
                 ]}
               >
+                <Text style={styles.answerLabel}>Answer</Text>
                 <Text style={styles.answer}>{item.answer}</Text>
+                
+                {/* Show answer status if submitted and user is regular user */}
+                {answerSubmitted[idx] && user.role === 'user' && (
+                  <View style={styles.answerStatusContainer}>
+                    <Text style={styles.answerStatusLabel}>Your Answer:</Text>
+                    <Text style={styles.userAnswerText}>{userAnswers[idx]}</Text>
+                    <View style={[
+                      styles.statusBadge,
+                      getAnswerStatus(idx) === 'correct' ? styles.correctBadge : styles.incorrectBadge
+                    ]}>
+                      <Text style={styles.statusText}>
+                        {getAnswerStatus(idx) === 'correct' ? '✅ Correct!' : '❌ Incorrect'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                
+                <Text style={styles.tapHint}>👆 Tap to see question</Text>
               </Animated.View>
             </View>
           </TouchableOpacity>
         </View>
       </RNAnimated.View>
+
+      {/* Answer Input Section - Only show for regular users, not admin/superadmin */}
+      {!flipped[idx] && !answerSubmitted[idx] && user.role === 'user' && (
+        <View style={styles.answerInputContainer}>
+          <Text style={styles.inputLabel}>💭 Your Answer:</Text>
+          <TextInput
+            style={styles.answerInput}
+            placeholder="Type your answer here..."
+            placeholderTextColor="rgba(255, 255, 255, 0.6)"
+            value={currentAnswer}
+            onChangeText={setCurrentAnswer}
+            multiline
+            maxLength={200}
+          />
+          <TouchableOpacity
+            style={[
+              styles.submitBtn,
+              !currentAnswer.trim() && styles.submitBtnDisabled
+            ]}
+            onPress={handleSubmitAnswer}
+            disabled={!currentAnswer.trim()}
+          >
+            <Text style={styles.submitBtnText}>✅ Submit Answer</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.buttonRow}>
         <TouchableOpacity
-          style={[styles.navBtn, current === 0 && styles.navBtnDisabled]}
+          style={[styles.navBtn, styles.prevBtn, current === 0 && styles.navBtnDisabled]}
           onPress={handlePrev}
           disabled={current === 0}
         >
-          <Text style={styles.navBtnText}>Previous</Text>
+          <Text style={styles.navBtnText}>← Previous</Text>
         </TouchableOpacity>
         {current < flashcards.length - 1 ? (
           <TouchableOpacity
-            style={[styles.navBtn, current === flashcards.length - 1 && styles.navBtnDisabled]}
+            style={[styles.navBtn, styles.nextBtn, current === flashcards.length - 1 && styles.navBtnDisabled]}
             onPress={handleNext}
             disabled={current === flashcards.length - 1}
           >
-            <Text style={styles.navBtnText}>Next</Text>
+            <Text style={styles.navBtnText}>Next →</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.navBtn, { backgroundColor: '#00c853' }]}
+            style={[styles.navBtn, styles.finishBtn]}
             onPress={() => navigation.replace('ThankYou')}
           >
-            <Text style={styles.navBtnText}>Finish</Text>
+            <Text style={styles.navBtnText}>🏆 Finish</Text>
           </TouchableOpacity>
         )}
       </View>
+
       {user.role === 'admin' && (
         <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('AddFlashcard')}>
-          <Text style={styles.addBtnText}>+ Add Flashcard</Text>
+          <Text style={styles.addBtnText}>✨ Add Flashcard</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#f7fafd' },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#007aff' },
-  progressBarContainer: { marginBottom: 18, alignItems: 'center' },
-  progressBarBg: { width: '80%', height: 8, backgroundColor: '#e0e0e0', borderRadius: 4, overflow: 'hidden' },
-  progressBarFill: { height: 8, backgroundColor: '#007aff', borderRadius: 4 },
-  progressText: { marginTop: 4, color: '#007aff', fontWeight: 'bold' },
+  container: { 
+    flex: 1, 
+    padding: 16, 
+    backgroundColor: '#6a5acd' 
+  },
+  headerRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 20,
+  },
+  headerTitle: { 
+    fontSize: 28, 
+    fontWeight: 'bold', 
+    color: '#ffffff' 
+  },
+  logoutBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  logoutText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  emptyIcon: {
+    fontSize: 80,
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptyMessage: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 24,
+  },
+  addFirstBtn: {
+    backgroundColor: '#ff6b6b',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  addFirstBtnText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  progressBarContainer: { 
+    marginBottom: 24, 
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  progressBarBg: { 
+    width: '80%', 
+    height: 10, 
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+    borderRadius: 5, 
+    overflow: 'hidden' 
+  },
+  progressBarFill: { 
+    height: 10, 
+    backgroundColor: '#ff6b6b', 
+    borderRadius: 5 
+  },
+  progressText: { 
+    marginTop: 8, 
+    color: '#ffffff', 
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
   cardWrapper: {
-    marginBottom: 18,
+    marginBottom: 24,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    shadowColor: '#007aff',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-    minHeight: 160,
+    backgroundColor: '#ffffff',
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+    minHeight: 240,
     padding: 0,
+    zIndex: 1,
+    marginHorizontal: 10,
   },
   flipContainer: {
     width: '100%',
-    height: 140,
+    height: 220,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardFace: {
     width: '100%',
-    height: 140,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: 220,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 20,
+    justifyContent: 'space-between',
     position: 'absolute',
     backfaceVisibility: 'hidden',
-    shadowColor: '#007aff',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-    padding: 18,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   cardFront: {
     zIndex: 2,
+    borderColor: '#6a5acd',
+    borderWidth: 3,
+    alignItems: 'center',
   },
   cardBack: {
-    backgroundColor: '#e6f7ff',
+    backgroundColor: 'rgba(232, 245, 232, 0.98)',
     zIndex: 1,
     transform: [{ rotateY: '180deg' }],
+    borderColor: '#4caf50',
+    borderWidth: 3,
+    alignItems: 'center',
+  },
+  cardLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#6a5acd',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(106, 90, 205, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    alignSelf: 'center',
+  },
+  answerLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2e7d32',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(46, 125, 50, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    alignSelf: 'center',
   },
   question: {
     fontWeight: 'bold',
     fontSize: 22,
-    color: '#222',
+    color: '#333333',
     textAlign: 'center',
+    lineHeight: 30,
+    flex: 1,
+    display: 'flex',
     textAlignVertical: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 20,
   },
   answer: {
-    color: '#00796b',
-    fontSize: 22,
-    fontWeight: '600',
+    color: '#1a5f1a',
+    fontSize: 24,
+    fontWeight: 'bold',
     textAlign: 'center',
+    lineHeight: 32,
+    flex: 1,
+    display: 'flex',
     textAlignVertical: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 20,
+    minHeight: 80,
+  },
+  tapHint: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    fontWeight: '500',
+    backgroundColor: 'rgba(106, 90, 205, 0.1)',
+    padding: 10,
+    borderRadius: 20,
+    alignSelf: 'center',
+    minWidth: 160,
+    marginTop: 8,
   },
   deleteBtn: {
     position: 'absolute',
-    right: 10,
-    top: 10,
+    right: 15,
+    top: 15,
     zIndex: 10,
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 2,
+    borderRadius: 20,
+    padding: 8,
     elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  deleteBtnText: {
+    fontSize: 16,
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 12,
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginTop: 16,
+    marginBottom: 16,
+    paddingHorizontal: 20,
+    zIndex: 1,
   },
   navBtn: {
-    backgroundColor: '#007aff',
-    paddingVertical: 10,
-    paddingHorizontal: 28,
-    borderRadius: 8,
-    marginHorizontal: 10,
-    marginTop: 0,
-    marginBottom: 0,
-    shadowColor: '#007aff',
-    shadowOpacity: 0.12,
-    shadowRadius: 2,
-    elevation: 2,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    minWidth: 120,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  prevBtn: {
+    backgroundColor: '#ff9800',
+  },
+  nextBtn: {
+    backgroundColor: '#2196f3',
+  },
+  finishBtn: {
+    backgroundColor: '#4caf50',
   },
   navBtnDisabled: {
-    backgroundColor: '#b0c4d6',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   navBtnText: {
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: 'bold',
     fontSize: 16,
   },
   addBtn: {
-    backgroundColor: '#00c853',
-    paddingVertical: 12,
+    backgroundColor: '#4caf50',
+    paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 8,
+    borderRadius: 12,
     alignSelf: 'center',
-    marginTop: 18,
-    shadowColor: '#00c853',
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 1,
   },
   addBtnText: {
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: 16,
   },
-  empty: { textAlign: 'center', marginTop: 40, color: '#888', fontSize: 18 },
+  scoreContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    alignSelf: 'center',
+    zIndex: 1,
+  },
+  scoreText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  answerInputContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 20,
+    margin: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    zIndex: 1,
+  },
+  inputLabel: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  answerInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 16,
+    color: '#ffffff',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    minHeight: 60,
+    maxHeight: 120,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  submitBtn: {
+    backgroundColor: '#4caf50',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  submitBtnDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  submitBtnText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  answerStatusContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#4caf50',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 5,
+  },
+  answerStatusLabel: {
+    color: '#4caf50',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  userAnswerText: {
+    color: '#333333',
+    fontSize: 16,
+    fontStyle: 'italic',
+    marginBottom: 12,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    padding: 8,
+    borderRadius: 8,
+  },
+  statusBadge: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+    alignSelf: 'center',
+  },
+  correctBadge: {
+    backgroundColor: '#4caf50',
+  },
+  incorrectBadge: {
+    backgroundColor: '#f44336',
+  },
+  statusText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
 });
 
 export default FlashcardsListScreen;

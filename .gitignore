@@ -91,3 +91,18 @@ ios/DerivedData/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Additional cleanup entries
+*.log
+*.tmp
+*.temp
+Gemfile.lock
+.watchmanconfig
+.vscode/
+Flipper-Folly/
+
+# Debug and release builds
+android/app/build/
+android/build/
+ios/build/
+ios/Pods/

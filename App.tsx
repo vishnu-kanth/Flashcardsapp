@@ -39,7 +39,7 @@ function App() {
   if (showWelcome) {
     return (
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Welcome">
+        <Stack.Navigator id={undefined}>
           <Stack.Screen name="Welcome" options={{ headerShown: false }}>
             {props => <WelcomeScreen {...props} />}
           </Stack.Screen>
@@ -58,12 +58,12 @@ function App() {
   if (user.role === 'superadmin') {
     return (
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="SuperAdmin">
-          <Stack.Screen name="SuperAdmin">
+        <Stack.Navigator id={undefined}>
+          <Stack.Screen name="SuperAdmin" options={{ headerShown: false }}>
             {props => <SuperAdminScreen {...props} onLogout={() => setUser(null)} />}
           </Stack.Screen>
-          <Stack.Screen name="AddUser" component={AddUserScreen} />
-          <Stack.Screen name="ManageUserFlashcards" component={ManageUserFlashcardsScreen} />
+          <Stack.Screen name="AddUser" component={AddUserScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ManageUserFlashcards" component={ManageUserFlashcardsScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
     );
@@ -71,16 +71,16 @@ function App() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="FlashcardsList">
-        <Stack.Screen name="FlashcardsList">
+      <Stack.Navigator id={undefined}>
+        <Stack.Screen name="FlashcardsList" options={{ headerShown: false }}>
           {props => <FlashcardsListScreen {...props} user={user} onLogout={() => setUser(null)} />}
         </Stack.Screen>
         {user.role === 'admin' && (
-          <Stack.Screen name="AddFlashcard">
+          <Stack.Screen name="AddFlashcard" options={{ headerShown: false }}>
             {props => <AddFlashcardScreen {...props} user={user} />}
           </Stack.Screen>
         )}
-        <Stack.Screen name="ThankYou">
+        <Stack.Screen name="ThankYou" options={{ headerShown: false }}>
           {props => <ThankYouScreen {...props} onLogout={() => setUser(null)} />}
         </Stack.Screen>
       </Stack.Navigator>
