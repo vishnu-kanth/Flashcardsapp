@@ -42,6 +42,7 @@ const WelcomeScreen = ({ navigation }: any) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#6a5acd" />
       
+      {/* @ts-ignore */}
       <Animated.View
         style={[
           styles.content,

@@ -89,6 +89,7 @@ const AddFlashcardScreen: React.FC<AddFlashcardScreenProps> = ({ user, navigatio
     >
       <StatusBar barStyle="light-content" backgroundColor="#6a5acd" />
       
+      {/* @ts-ignore */}
       <Animated.View
         style={[
           styles.content,

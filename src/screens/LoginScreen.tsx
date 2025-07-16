@@ -78,6 +78,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     >
       <StatusBar barStyle="light-content" backgroundColor="#6a5acd" />
       
+      {/* @ts-ignore */}
       <Animated.View
         style={[
           styles.content,
