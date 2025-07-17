@@ -1,5 +1,8 @@
-![WhatsApp Image 2025-07-17 at 15 23 06_48e1b10f](https://github.com/user-attachments/assets/1f18f0fa-7cf3-4b92-a669-dd6c10cb254d)
-![WhatsApp Image 2025-07-17 at 15 23 06_48e1b10f](https://github.com/user-attachments/assets/47088492-9dcd-4b04-bd25-77f99da0c98d)
+![WhatsApp Image 2025-07-17 at 15 23 06_48e1b10f](https://github.com/user-attachments/assets/1f18f0fa-7cf3-4b92-a669-dd6c10cb254d)![Uploading WhatsApp Image 2025-07-17 at 15.23.05_bc59fdee.jpg…]()
+![WhatsApp Image 2025-07-17 at 15 23 05_bc59fdee](https://github.com/user-attachments/assets/a6b776df-02dd-43a6-9012-e0dd35f9bafa)
+![WhatsApp Image 2025-07-17 at 15 23 06_f2cacd8d](https://github.com/user-attachments/assets/eb557991-f1f7-45f9-9609-0220479f91f3)
+![WhatsApp Image 2025-07-17 at 15 23 06_bfde2a2e](https://github.com/user-attachments/assets/85faa583-f70d-4270-a3fe-ee0da7bddac3)
+
 # FlashcardsApp
 
 A very basic React Native Flashcards app with two screens:
