@@ -1,3 +1,5 @@
+![WhatsApp Image 2025-07-17 at 15 23 06_48e1b10f](https://github.com/user-attachments/assets/1f18f0fa-7cf3-4b92-a669-dd6c10cb254d)
+![WhatsApp Image 2025-07-17 at 15 23 06_48e1b10f](https://github.com/user-attachments/assets/47088492-9dcd-4b04-bd25-77f99da0c98d)
 # FlashcardsApp
 
 A very basic React Native Flashcards app with two screens:
